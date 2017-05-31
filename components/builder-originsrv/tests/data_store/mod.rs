@@ -389,6 +389,35 @@ fn create_origin_invitation() {
     let count: i64 = rows.iter().nth(0).unwrap().get(0);
     assert_eq!(count, 1);
 }
+#[test]
+fn create_origin_invitation_handles_unique_constraint_violations_correctly() {
+    let ds = datastore_test!(DataStore);
+    let mut origin = originsrv::OriginCreate::new();
+    origin.set_name(String::from("neurosis"));
+    origin.set_owner_id(1);
+    origin.set_owner_name(String::from("scottkelly"));
+    ds.create_origin(&origin).expect("Should create origin");
+
+    let neurosis = ds.get_origin_by_name("neurosis")
+        .expect("Could not retrieve origin")
+        .expect("Origin does not exist");
+
+    let mut oic = originsrv::OriginInvitationCreate::new();
+    oic.set_origin_id(neurosis.get_id());
+    oic.set_origin_name(String::from(neurosis.get_name()));
+    oic.set_account_id(2);
+    oic.set_account_name(String::from("noel_gallagher"));
+    oic.set_owner_id(1);
+    ds.create_origin_invitation(&oic)
+        .expect("Failed to create the origin invitation");
+    ds.create_origin_invitation(&oic)
+        .expect("Failed to create the origin invitation again, which should be a no-op");
+
+    oic.set_owner_id(5);
+    ds.create_origin_invitation(&oic)
+        .expect("Failed to create the origin invitation again, which should be a no-op");
+
+}
 
 #[test]
 fn list_origin_invitations_for_origin() {
